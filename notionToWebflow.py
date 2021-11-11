@@ -118,23 +118,17 @@ if __name__ == "__main__":
     webflow_title_ids = get_webflow_title_ids(collection_id, headers)
     for page_id, page_title in page_id_titles.items():
         page_contents = get_page_content(page_id, headers2)
-        with open("page_contents.json", "w") as f:
-            f.truncate(0)
-            json.dump(page_contents, f, indent=4)
         page_content = parse_page_content(page_contents)
-        with open("page_sontent.json", "w") as f:
-            f.truncate(0)
-            json.dump(page_content, f, indent=4)
         webflow_blog_content = create_webflow_blog_content(page_content)
         message = {
             "fields": {
-            "name": page_title,
-            "slug": page_title.replace(" ","-"),
-            "_archived": False,
-            "_draft": False,
-            "blog-content": webflow_blog_content,
-            "blog-post-summary": "",
-            "main-image": "580e63fe8c9a982ac9b8b749"
+                "name": page_title,
+                "slug": page_title.replace(" ","-"),
+                "_archived": False,
+                "_draft": False,
+                "blog-content": webflow_blog_content,
+                "blog-post-summary": "",
+                "main-image": "580e63fe8c9a982ac9b8b749"
             }
         }
         if page_title in webflow_title_ids.keys():
