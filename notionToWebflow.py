@@ -43,13 +43,13 @@ def get_page_content(page_id, headers) -> dict:
     res = requests.request("GET", URL, headers=headers2)
     return json.loads(res.content)
 
-def parse_page_content(content) -> pd.DataFrame():
-    column_names = ["block_num", "type", "text", "link", "annotations", "color"]
-    df = pd.DataFrame(columns = column_names)
-    for block_num, block in enumerate(content["results"]):
+def parse_page_content(content) -> list:
+    page_content_full = []
+    for block in content["results"]:
         type = block["type"]
-        text_contents = block[type]["text"]
-        for piece in text_contents:
+        page_content = {}
+        page_content[type]=[]
+        for piece in block[type]["text"]:
             text = piece["text"]["content"]
 
             if piece["text"]["link"] == None:
@@ -62,14 +62,14 @@ def parse_page_content(content) -> pd.DataFrame():
             for x in possible_annotations:
                 if piece["annotations"][x] == True:
                     annotations.append(x)
-            if annotations == []:
-                annotations = None
             
             color = piece["annotations"]["color"]
 
-            row = {"block_num": block_num, "type": type, "text": text, "link": link, "annotations": annotations, "color": color}
-            df = df.append(row, ignore_index = True)
-    return df
+            row = {"text": text, "link": link, "annotations": annotations, "color": color}
+            row_copy = row.copy()
+            page_content[type].append(row_copy)
+        page_content_full.append(page_content.copy())
+    return page_content_full
 
 def get_blogpost_schema(API_key, collection_id, headers, ignore) -> set:
     URL = f"https://api.webflow.com/collections/{collection_id}"
@@ -89,50 +89,58 @@ def get_webflow_title_ids(collection_id, headers) -> dict:
         webflow_title_ids[item["name"]] = item["_id"]
     return webflow_title_ids
 
-def create_webflow_blog_content(df) -> str:
+def create_webflow_blog_content(page_content) -> str:
     blog_content = ""
     typedict = {"heading_1": "h1", "heading_2": "h2", "heading_3": "h3", "paragraph": "p", "code": "p", "bulleted_list_item": "p", "quote": "blockquote"}
+    annotationdict = {"bold": "strong", "italic": "em"}
+    for item in page_content:
+        type = list(item.keys())[0]
+        info = item[type]
+        blog_content_piece = ""
+        for piece in info:
+            blog_content_part = piece["text"]
+            if piece["link"] != None:
+                link = piece["link"]
+                if "http://"==link[0:6]:
+                    link = link[7:]
+                blog_content_part = f'<a href={link}>{blog_content_part}</a>'
+            for annotation in piece["annotations"]:
+                if annotation in annotationdict.keys():
+                    webflow_annotation = annotationdict[annotation]
+                    blog_content_part = f"<{webflow_annotation}>{blog_content_part}</{webflow_annotation}>"
+            blog_content_piece += blog_content_part
+        webflow_type = typedict[type]
+        blog_content += f"<{webflow_type}>{blog_content_piece}</{webflow_type}>"
+    return blog_content
     
-    #<a href=\"http://notion.so\"> </a>
-    pass
-
-
 if __name__ == "__main__":
     page_id_titles = get_page_id_titles(database_id, headers1)
     webflow_title_ids = get_webflow_title_ids(collection_id, headers)
     for page_id, page_title in page_id_titles.items():
         page_contents = get_page_content(page_id, headers2)
-        df = parse_page_content(page_contents)
-        print(df)
-
-#         blog_content = create_webflow_blog_content(df)
-#         message = {
-#             "fields": {
-#             "name": page_title,
-#             "slug": page_title,
-#             "_archived": False,
-#             "_draft": False,
-#             "blog-content": blog_content,
-#             "blog-post-summary": "Summary of exciting blog post",
-#             "main-image": "580e63fe8c9a982ac9b8b749"
-#         }
-# }
-#         if page_title in webflow_title_ids.keys():
-#             #update post
-#             pass
-#         else:
-#             #create new post
-#             pass
-
-    # schema = get_blogpost_schema(API_key, collection_id, headers, ignore)
-    # print(schema)
-
-    # page_ids = []
-    # URL = f"https://api.notion.com/v1/databases/{database_id}/query"
-    # res = requests.request("POST", URL, headers=headers1)
-    # content = json.loads(res.content)
-    # for page in content["results"]:
-    #     page_id = page["id"]
-    #     with open(f"page_{page_id}.json", "w") as f:
-    #         f.truncate(0)
-    #         json.dump(page, f, indent=2)
+        with open("page_contents.json", "w") as f:
+            f.truncate(0)
+            json.dump(page_contents, f, indent=4)
+        page_content = parse_page_content(page_contents)
+        with open("page_sontent.json", "w") as f:
+            f.truncate(0)
+            json.dump(page_content, f, indent=4)
+        webflow_blog_content = create_webflow_blog_content(page_content)
+        message = {
+            "fields": {
+            "name": page_title,
+            "slug": page_title.replace(" ","-"),
+            "_archived": False,
+            "_draft": False,
+            "blog-content": webflow_blog_content,
+            "blog-post-summary": "",
+            "main-image": "580e63fe8c9a982ac9b8b749"
+            }
+        }
+        if page_title in webflow_title_ids.keys():
+            item_id = webflow_title_ids[page_title]
+            URL = f"https://api.webflow.com/collections/{collection_id}/items/{item_id}"
+            res = requests.request("PUT", URL, headers=headers, json=message)
+        else:
+            URL = f"https://api.webflow.com/collections/{collection_id}/items"
+            res = requests.request("POST", URL, headers=headers, json=message)
