@@ -1,2 +1,4 @@
 .\env
 resources.txt
+.gitignore
+*.json
