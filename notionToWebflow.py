@@ -1,6 +1,5 @@
 import requests
 import json
-import pandas as pd
 
 #Notion
 secret_key = "secret_cpn7S1LfX2zIaeW3faN9JYdUSfOrR5txXifbLcLY08b"
