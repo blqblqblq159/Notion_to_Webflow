@@ -49,25 +49,26 @@ def parse_page_content(content) -> list:
         type = block["type"]
         page_content = {}
         page_content[type]=[]
-        for piece in block[type]["text"]:
-            text = piece["text"]["content"]
+        if "text" in block[type].keys(): #ignore figures
+            for piece in block[type]["text"]:
+                text = piece["text"]["content"]
 
-            if piece["text"]["link"] == None:
-                link = None
-            else:
-                link = piece["text"]["link"]["url"]
+                if piece["text"]["link"] == None:
+                    link = None
+                else:
+                    link = piece["text"]["link"]["url"]
 
-            annotations = []
-            possible_annotations = ["bold", "italic", "strikethrough", "underline", "code"]
-            for x in possible_annotations:
-                if piece["annotations"][x]:
-                    annotations.append(x)
-            
-            color = piece["annotations"]["color"]
+                annotations = []
+                possible_annotations = ["bold", "italic", "strikethrough", "underline", "code"]
+                for x in possible_annotations:
+                    if piece["annotations"][x]:
+                        annotations.append(x)
+                
+                color = piece["annotations"]["color"]
 
-            row = {"text": text, "link": link, "annotations": annotations, "color": color}
-            page_content[type].append(row.copy())
-        page_content_full.append(page_content.copy())
+                row = {"text": text, "link": link, "annotations": annotations, "color": color}
+                page_content[type].append(row.copy())
+            page_content_full.append(page_content.copy())
     return page_content_full
 
 def get_blogpost_schema(API_key, collection_id, headers, ignore) -> set:
