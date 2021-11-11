@@ -60,14 +60,13 @@ def parse_page_content(content) -> list:
             annotations = []
             possible_annotations = ["bold", "italic", "strikethrough", "underline", "code"]
             for x in possible_annotations:
-                if piece["annotations"][x] == True:
+                if piece["annotations"][x]:
                     annotations.append(x)
             
             color = piece["annotations"]["color"]
 
             row = {"text": text, "link": link, "annotations": annotations, "color": color}
-            row_copy = row.copy()
-            page_content[type].append(row_copy)
+            page_content[type].append(row.copy())
         page_content_full.append(page_content.copy())
     return page_content_full
 
