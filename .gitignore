@@ -1,4 +1,6 @@
 .\env
-resources.txt
+*.txt
 *.json
+*.html
+
 test.py

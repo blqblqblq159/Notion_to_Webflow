@@ -2,7 +2,8 @@ import requests
 import json
 
 #Notion
-secret_key = "secret_cpn7S1LfX2zIaeW3faN9JYdUSfOrR5txXifbLcLY08b"
+with open("notion_key.txt", "r") as f:
+    secret_key = f.read()
 database_id = "8ff8bb638a2b47df8a9eaa0b662588d1"
 
 headers1 = {
@@ -17,7 +18,8 @@ headers2 = {
 }
 
 #Webflow
-API_key = "5a373be964aa6f0336e7daf76484fb1749d194c34b803d199bf21ccefb049381"
+with open("webflow_key.txt", "r") as f:
+    API_key = f.read()
 site_id = "618bc51a1ffb6da00af1d0b9"
 collection_id = "618bc51a1ffb6defebf1d0dd"
 headers = {
@@ -90,8 +92,10 @@ def get_webflow_title_ids(collection_id, headers) -> dict:
 
 def create_webflow_blog_content(page_content) -> str:
     blog_content = ""
-    typedict = {"heading_1": "h1", "heading_2": "h2", "heading_3": "h3", "paragraph": "p", "code": "p", "bulleted_list_item": "p", "quote": "blockquote"}
+    typedict = {"heading_1": "h1", "heading_2": "h2", "heading_3": "h3", "paragraph": "p", "code": "p", "bulleted_list_item": "li", "numbered_list_item": "li", "quote": "blockquote"}
     annotationdict = {"bold": "strong", "italic": "em"}
+    in_bullet_list = False
+    in_number_list = False
     for item in page_content:
         type = list(item.keys())[0]
         info = item[type]
@@ -108,6 +112,23 @@ def create_webflow_blog_content(page_content) -> str:
                     webflow_annotation = annotationdict[annotation]
                     blog_content_part = f"<{webflow_annotation}>{blog_content_part}</{webflow_annotation}>"
             blog_content_piece += blog_content_part
+        if type == "bulleted_list_item":
+            if not in_bullet_list:
+                blog_content += "<ul>"
+            in_bullet_list = True
+        if type != "bulleted_list_item":
+            if in_bullet_list:
+                blog_content += "</ul>"
+            in_bullet_list = False
+
+        if type == "numbered_list_item":
+            if not in_number_list:
+                blog_content += "<ol>"
+            in_number_list = True
+        if type != "numbered_list_item":
+            if in_number_list:
+                blog_content += "</ol>"
+            in_number_list = False
         webflow_type = typedict[type]
         blog_content += f"<{webflow_type}>{blog_content_piece}</{webflow_type}>"
     return blog_content
@@ -137,3 +158,8 @@ if __name__ == "__main__":
         else:
             URL = f"https://api.webflow.com/collections/{collection_id}/items"
             res = requests.request("POST", URL, headers=headers, json=message)
+
+    # page_contents = get_page_content("66487fef93be417c999c2809c0a8f4f4", headers2)
+    # with open("notion_response.json", "w") as f:
+    #     f.truncate(0)
+    #     json.dump(page_contents, f, indent=4)
