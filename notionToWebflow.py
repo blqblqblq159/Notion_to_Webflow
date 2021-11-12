@@ -26,7 +26,10 @@ headers = {
     "Authorization": f"Bearer {API_key}",
     "accept-version": "1.0.0"
 }
-ignore = {"_archived", "_draft", "created-on", "updated-on", "published-on", "created-by", "updated-by", "published-by"}
+ignore = {
+    "_archived", "_draft", "created-on", "updated-on",
+    "published-on", "created-by", "updated-by", "published-by"
+}
 
 def get_page_id_titles(database_id, headers) -> dict:
     page_id_titles = {}
@@ -36,7 +39,8 @@ def get_page_id_titles(database_id, headers) -> dict:
     for page in content["results"]:
         condition = True #create custom condition for page to be included in process
         if(condition):
-            page_id_titles[page["id"]] = page["properties"]["Name"]["title"][0]["text"]["content"]
+            page_title = page["properties"]["Name"]["title"][0]["text"]["content"]
+            page_id_titles[page["id"]] = page_title
     return page_id_titles
 
 def get_page_content(page_id, headers) -> dict:
@@ -60,14 +64,20 @@ def parse_page_content(content) -> list:
                     link = piece["text"]["link"]["url"]
 
                 annotations = []
-                possible_annotations = ["bold", "italic", "strikethrough", "underline", "code"]
+                possible_annotations = [
+                    "bold", "italic", "strikethrough",
+                    "underline", "code"
+                ]
                 for x in possible_annotations:
                     if piece["annotations"][x]:
                         annotations.append(x)
                 
                 color = piece["annotations"]["color"]
 
-                row = {"text": text, "link": link, "annotations": annotations, "color": color}
+                row = {
+                    "text": text, "link": link,
+                    "annotations": annotations, "color": color
+                }
                 page_content[type].append(row.copy())
             page_content_full.append(page_content.copy())
     return page_content_full
@@ -92,7 +102,11 @@ def get_webflow_title_ids(collection_id, headers) -> dict:
 
 def create_webflow_blog_content(page_content) -> str:
     blog_content = ""
-    typedict = {"heading_1": "h1", "heading_2": "h2", "heading_3": "h3", "paragraph": "p", "code": "p", "bulleted_list_item": "li", "numbered_list_item": "li", "quote": "blockquote"}
+    typedict = {
+        "heading_1": "h1", "heading_2": "h2", "heading_3": "h3",
+        "paragraph": "p", "code": "p", "bulleted_list_item": "li",
+        "numbered_list_item": "li", "quote": "blockquote"
+    }
     annotationdict = {"bold": "strong", "italic": "em"}
     in_bullet_list = False
     in_number_list = False
@@ -110,7 +124,11 @@ def create_webflow_blog_content(page_content) -> str:
             for annotation in piece["annotations"]:
                 if annotation in annotationdict.keys():
                     webflow_annotation = annotationdict[annotation]
-                    blog_content_part = f"<{webflow_annotation}>{blog_content_part}</{webflow_annotation}>"
+                    blog_content_part = f"""
+                        <{webflow_annotation}>
+                        {blog_content_part}
+                        </{webflow_annotation}>
+                    """
             blog_content_piece += blog_content_part
         if type == "bulleted_list_item":
             if not in_bullet_list:
@@ -158,8 +176,3 @@ if __name__ == "__main__":
         else:
             URL = f"https://api.webflow.com/collections/{collection_id}/items"
             res = requests.request("POST", URL, headers=headers, json=message)
-
-    # page_contents = get_page_content("66487fef93be417c999c2809c0a8f4f4", headers2)
-    # with open("notion_response.json", "w") as f:
-    #     f.truncate(0)
-    #     json.dump(page_contents, f, indent=4)
